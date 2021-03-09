@@ -5,11 +5,14 @@ import {loadAuthors} from "../../redux/actions/authorActions";
 import PropTypes from "prop-types";
 import CourseForm from "./CourseForm";
 import {newCourse} from "../../../tools/mockData";
+import Spinner from "../common/Spinner";
+import {toast} from "react-toastify";
 
-function ManageCoursesPage({courses, authors, loadAuthors, loadCourses, saveCourse, history, ...props}) {  
+function ManageCoursePage({courses, authors, loadAuthors, loadCourses, saveCourse, history, ...props}) {  
 
   const [course, setCourse] = useState({...props.course});
   const [errors, setErrors] = useState({});
+  const [saving, setSaving] = useState(false);
  
   useEffect(()=>{    
     
@@ -17,6 +20,8 @@ function ManageCoursesPage({courses, authors, loadAuthors, loadCourses, saveCour
       loadCourses().catch((error)=> {
         alert('Loading courses failed '+error);
       });
+    } else {
+      setCourse({...props.course});
     }
     
     if (authors.length===0) {
@@ -24,7 +29,7 @@ function ManageCoursesPage({courses, authors, loadAuthors, loadCourses, saveCour
         alert('Loading authors failed '+error);
       });
     } 
-  },[]);
+  },[props.course]);
 
   function handleChange() {
     const {name, value} = event.target;
@@ -36,18 +41,20 @@ function ManageCoursesPage({courses, authors, loadAuthors, loadCourses, saveCour
 
   function handleSave(event) {
     event.preventDefault();
+    setSaving(true);
     saveCourse(course).then(()=> {
+      toast.success('Course Saved!')
       history.push("/courses");
     });
   }
 
-  return (
-        <CourseForm course={course} errors={errors} authors={authors} onChange={handleChange} onSave={handleSave}/>
-  );
+  return authors.length===0 || courses.length ===0 ? (<Spinner/>) : (
+      <CourseForm course={course} errors={errors} authors={authors} onChange={handleChange} onSave={handleSave} saving={saving}/>
+    );
 
 }  
 
-ManageCoursesPage.propTypes = {
+ManageCoursePage.propTypes = {
   course: PropTypes.object.isRequired,
   authors: PropTypes.array.isRequired,
   courses: PropTypes.array.isRequired,
@@ -57,9 +64,16 @@ ManageCoursesPage.propTypes = {
   history: PropTypes.object.isRequired
 };
 
-function mapStateToProps(state) {
+export function getCourseBySlug(courses, slug) {  
+  return courses.find(course => course.slug === slug) || null;
+}
+
+function mapStateToProps(state, ownProps) {
+  const slug = ownProps.match.params.slug;
+  const course = slug && state.courses.length > 0 ? getCourseBySlug(state.courses, slug) : newCourse;
+
   return {
-    course: newCourse,
+    course,
     courses: state.courses,    
     authors: state.authors
   };
@@ -74,4 +88,4 @@ const mapDispatchToProps = {
 export default connect(
   mapStateToProps,
   mapDispatchToProps
-)(ManageCoursesPage);
+)(ManageCoursePage);
